@@ -221,13 +221,13 @@ void FUE1Model::UnloadGeometry()
 	groups.Reset();
 }
 
-int FUE1Model::FindFrame( const char *name )
+int FUE1Model::FindFrame(const char* name, bool nodefault)
 {
 	// unsupported, there are no named frames
 	return -1;
 }
 
-void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int frame, int frame2, double inter, int translation )
+void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int frame, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition)
 {
 	// the moment of magic
 	if ( (frame >= numFrames) || (frame2 >= numFrames) ) return;
@@ -258,7 +258,7 @@ void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int f
 		// TODO: Handle per-group render styles and other flags once functions for it are implemented
 		// Future note: poly renderstyles should always be enforced unless the actor itself has a style other than Normal
 		renderer->SetMaterial(sskin,false,translation);
-		renderer->SetupFrame(this, vofs+frame*fsize,vofs+frame2*fsize,vsize);
+		renderer->SetupFrame(this, vofs + frame * fsize, vofs + frame2 * fsize, vsize, {}, -1);
 		renderer->DrawArrays(0,vsize);
 		vofs += vsize;
 	}

@@ -65,9 +65,9 @@ class FMD3Model : public FModel
 public:
 	FMD3Model() = default;
 
-	virtual bool Load(const char * fn, int lumpnum, const char * buffer, int length);
-	virtual int FindFrame(const char * name);
-	virtual void RenderFrame(FModelRenderer *renderer, FGameTexture * skin, int frame, int frame2, double inter, int translation=0);
+	virtual bool Load(const char * fn, int lumpnum, const char * buffer, int length) override;
+	virtual int FindFrame(const char* name, bool nodefault) override;
+	virtual void RenderFrame(FModelRenderer *renderer, FGameTexture * skin, int frame, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition) override;
 	void LoadGeometry();
 	void BuildVertexBuffer(FModelRenderer *renderer);
 	virtual void AddSkins(uint8_t *hitlist);
