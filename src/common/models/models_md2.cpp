@@ -332,7 +332,7 @@ void FDMDModel::BuildVertexBuffer(FModelRenderer *renderer)
 //
 //===========================================================================
 
-void FDMDModel::AddSkins(uint8_t *hitlist)
+void FDMDModel::AddSkins(uint8_t *hitlist, const FTextureID*)
 {
 	for (int i = 0; i < info.numSkins; i++)
 	{
@@ -354,7 +354,7 @@ int FDMDModel::FindFrame(const char* name, bool nodefault)
 	{
 		if (!stricmp(name, frames[i].name)) return i;
 	}
-	return -1;
+	return FErr_NotFound;
 }
 
 //===========================================================================

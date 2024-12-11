@@ -56,6 +56,13 @@ enum ModelRendererType
 	NumModelRendererTypes
 };
 
+enum EFrameError
+{
+	FErr_NotFound = -1,
+	FErr_Voxel = -2,
+	FErr_Singleframe = -3
+};
+
 class FModel
 {
 public:
@@ -66,7 +73,7 @@ public:
 	virtual int FindFrame(const char * name, bool nodefault = false) = 0;
 	virtual void RenderFrame(FModelRenderer *renderer, FGameTexture * skin, int frame, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition) = 0;
 	virtual void BuildVertexBuffer(FModelRenderer *renderer) = 0;
-	virtual void AddSkins(uint8_t *hitlist) = 0;
+	virtual void AddSkins(uint8_t *hitlist, const FTextureID* surfaceskinids) = 0;
 	virtual float getAspectFactor(float vscale) { return 1.f; }
 	virtual const TArray<TRS>* AttachAnimationData() { return nullptr; };
 	virtual const TArray<VSMatrix> CalculateBones(int frame1, int frame2, double inter, const TArray<TRS>* animationData, DBoneComponents* bones, int index) { return {}; };

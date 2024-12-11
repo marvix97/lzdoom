@@ -356,7 +356,7 @@ void FVoxelModel::BuildVertexBuffer(FModelRenderer *renderer)
 //
 //===========================================================================
 
-void FVoxelModel::AddSkins(uint8_t *hitlist)
+void FVoxelModel::AddSkins(uint8_t *hitlist, const FTextureID*)
 {
 	hitlist[mPalette.GetIndex()] |= FTextureManager::HIT_Flat;
 }

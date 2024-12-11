@@ -64,12 +64,18 @@ struct FVoxel
 
 struct FVoxelDef
 {
-	FVoxel *Voxel;
+	FVoxel* Voxel;
 	int PlacedSpin;			// degrees/sec to spin actors without MF_DROPPED set
 	int DroppedSpin;		// degrees/sec to spin actors with MF_DROPPED set
 	int VoxeldefIndex;		// Needed by GZDoom
 	double		Scale;
 	DAngle		AngleOffset;// added to actor's angle to compensate for wrong-facing voxels
+	double		xoffset;
+	double		yoffset;
+	double		zoffset;
+	bool		PitchFromMomentum;
+	bool		UseActorPitch;
+	bool		UseActorRoll;
 };
 
 extern TDeletingArray<FVoxel *> Voxels;	// used only to auto-delete voxels on exit.

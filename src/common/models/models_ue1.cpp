@@ -223,8 +223,10 @@ void FUE1Model::UnloadGeometry()
 
 int FUE1Model::FindFrame(const char* name, bool nodefault)
 {
-	// unsupported, there are no named frames
-	return -1;
+	// there are no named frames, but we need something here to properly interface with it. So just treat the string as an index number.
+	auto index = strtol(name, nullptr, 0);
+	if (index < 0 || index >= numFrames) return FErr_NotFound;
+	return index;
 }
 
 void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int frame, int frame2, double inter, int translation, const FTextureID* surfaceskinids, const TArray<VSMatrix>& boneData, int boneStartPosition)
@@ -305,13 +307,13 @@ void FUE1Model::BuildVertexBuffer( FModelRenderer *renderer )
 	vbuf->UnlockVertexBuffer();
 }
 
-void FUE1Model::AddSkins( uint8_t *hitlist )
+void FUE1Model::AddSkins( uint8_t *hitlist, const FTextureID* surfaceskinids)
 {
 	for (int i = 0; i < numGroups; i++)
 	{
-		int ssIndex = groups[i].texNum + curMDLIndex * MD3_MAX_SURFACES;
-		if (curSpriteMDLFrame && curSpriteMDLFrame->surfaceskinIDs[ssIndex].isValid())
-			hitlist[curSpriteMDLFrame->surfaceskinIDs[ssIndex].GetIndex()] |= FTextureManager::HIT_Flat;
+		int ssIndex = groups[i].texNum;
+		if (surfaceskinids && surfaceskinids[ssIndex].isValid())
+			hitlist[surfaceskinids[ssIndex].GetIndex()] |= FTextureManager::HIT_Flat;
 	}
 }
 

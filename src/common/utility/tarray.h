@@ -304,7 +304,6 @@ public:
 	// Note that the asserts must let the element after the end pass because this gets frequently used as a sentinel pointer.
 	T &operator[] (size_t index) const
 	{
-		assert(index <= Count);
 		return Array[index];
 	}
 	// Returns the value of an element

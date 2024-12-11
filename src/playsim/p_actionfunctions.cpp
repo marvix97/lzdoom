@@ -69,6 +69,7 @@
 #include "sbar.h"
 #include "actorinlines.h"
 #include "types.h"
+#include <model.h>
 
 static FRandom pr_camissile ("CustomActorfire", false);
 static FRandom pr_cabullet ("CustomBullet", false);
@@ -5034,6 +5035,7 @@ enum ChangeModelFlags
 	CMDL_USESURFACESKIN = 1 << 2,
 };
 
+/*
 DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 {
 	PARAM_ACTION_PROLOGUE(AActor);
@@ -5102,9 +5104,9 @@ DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 
 	//[SM] - Let's clear out any potential entries at the specified indices
 	mobj->modelData->modelDef = modeldef;
-	if(maxModels > modelindex) mobj->modelData->modelIDs.Pop(mobj->modelData->modelIDs[modelindex]);
-	if(maxAnimations > animationindex) mobj->modelData->animationIDs.Pop(mobj->modelData->animationIDs[animationindex]);
-	if(maxGenerators > modelindex) mobj->modelData->modelFrameGenerators.Pop(mobj->modelData->modelFrameGenerators[modelindex]);
+	if (maxModels > modelindex) mobj->modelData->modelIDs.Pop(mobj->modelData->modelIDs[modelindex]);
+	if (maxAnimations > animationindex) mobj->modelData->animationIDs.Pop(mobj->modelData->animationIDs[animationindex]);
+	if (maxGenerators > modelindex) mobj->modelData->modelFrameGenerators.Pop(mobj->modelData->modelFrameGenerators[modelindex]);
 
 	if (flags & CMDL_USESURFACESKIN)
 	{
@@ -5125,7 +5127,7 @@ DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 		while ((int)mobj->modelData->surfaceSkinIDs.Size() < skinPosition) mobj->modelData->surfaceSkinIDs.Push(FNullTextureID());
 	else
 		while ((int)mobj->modelData->skinIDs.Size() < skinindex) mobj->modelData->skinIDs.Push(FNullTextureID());
-	
+
 	mobj->modelData->modelIDs.Insert(modelindex, queryModel);
 	mobj->modelData->modelFrameGenerators.Insert(modelindex, generatorindex);
 	mobj->modelData->animationIDs.Insert(animationindex, queryAnimation);
@@ -5141,9 +5143,9 @@ DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 		fullName.Format("%s%s", modelpath.GetChars(), model.GetChars());
 		bool allowPush = true;
 		for (unsigned i = 0; i < savedModelFiles.Size(); i++) if (!savedModelFiles[i].CompareNoCase(fullName)) allowPush = false;
-		for (unsigned i = 0; i < Models.Size()-1; i++) if (!Models[i]->mFileName.CompareNoCase(fullName)) allowPush = false;
+		for (unsigned i = 0; i < Models.Size() - 1; i++) if (!Models[i]->mFileName.CompareNoCase(fullName)) allowPush = false;
 
-		if(allowPush) savedModelFiles.Push(fullName);
+		if (allowPush) savedModelFiles.Push(fullName);
 	}
 	//Same for animations
 	if (queryAnimation >= 0)
@@ -5168,7 +5170,7 @@ DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 		mobj->modelData->surfaceSkinIDs.Pop(mobj->modelData->surfaceSkinIDs.Last());
 	while (mobj->modelData->animationIDs.Size() > 0 && mobj->modelData->animationIDs.Last() == -1)
 		mobj->modelData->animationIDs.Pop(mobj->modelData->animationIDs.Last());
-	
+
 	if (mobj->modelData->modelIDs.Size() == 0 && mobj->modelData->modelFrameGenerators.Size() == 0 && mobj->modelData->skinIDs.Size() == 0 && mobj->modelData->surfaceSkinIDs.Size() == 0 && mobj->modelData->animationIDs.Size() == 0 && modeldef == NAME_None)
 	{
 		mobj->hasmodel = mobj->modelData->hasModel;
@@ -5182,6 +5184,8 @@ DEFINE_ACTION_FUNCTION(AActor, A_ChangeModel)
 
 	return 0;
 }
+
+*/
 
 // This needs to account for the fact that internally renderstyles are stored as a series of operations, 
 // but the script side only cares about symbolic constants.

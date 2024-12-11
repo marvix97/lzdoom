@@ -50,15 +50,15 @@
 #endif
 
 CVAR(Bool, gl_interpolate_model_frames, true, CVAR_ARCHIVE)
-EXTERN_CVAR (Bool, r_drawvoxels)
+EXTERN_CVAR(Bool, r_drawvoxels)
 
-extern TDeletingArray<FVoxel *> Voxels;
-extern TDeletingArray<FVoxelDef *> VoxelDefs;
+extern TDeletingArray<FVoxel*> Voxels;
+extern TDeletingArray<FVoxelDef*> VoxelDefs;
 
-void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, const PClass* ti, int translation);
+void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, const PClass* ti, int translation, AActor* actor);
 
 
-void RenderModel(FModelRenderer *renderer, float x, float y, float z, FSpriteModelFrame *smf, AActor *actor, double ticFrac)
+void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteModelFrame* smf, AActor* actor, double ticFrac)
 {
 	// Setup transformation.
 
@@ -90,7 +90,7 @@ void RenderModel(FModelRenderer *renderer, float x, float y, float z, FSpriteMod
 		if (actor->Vel.LengthSquared() > EQUAL_EPSILON)
 		{
 			// [BB] Calculate the pitch using spherical coordinates.
-			if (z || x || y) pitch = float(atan(z / sqrt(x*x + y*y)) / M_PI * 180);
+			if (z || x || y) pitch = float(atan(z / sqrt(x * x + y * y)) / M_PI * 180);
 
 			// Correcting pitch if model is moving backwards
 			if (fabs(x) > EQUAL_EPSILON || fabs(y) > EQUAL_EPSILON)
@@ -169,21 +169,22 @@ void RenderModel(FModelRenderer *renderer, float x, float y, float z, FSpriteMod
 	objectToWorldMatrix.rotate(smf->pitchoffset, 0, 0, 1);
 	objectToWorldMatrix.rotate(-smf->rolloffset, 1, 0, 0);
 
-	// consider the pixel stretching. For non-voxels this must be factored out here
+
 	float stretch = (smf->modelIDs[0] != -1 ? Models[smf->modelIDs[0]]->getAspectFactor(actor->Level->info->pixelstretch) : 1.f) / actor->Level->info->pixelstretch;
 	objectToWorldMatrix.scale(1, stretch, 1);
+	
 
 	float orientation = scaleFactorX * scaleFactorY * scaleFactorZ;
 
 	renderer->BeginDrawModel(actor->RenderStyle, smf, objectToWorldMatrix, orientation < 0);
-	RenderFrameModels(renderer, actor->Level, smf, actor->state, actor->tics, actor->GetClass(), translation);
+	RenderFrameModels(renderer, actor->Level, smf, actor->state, actor->tics, actor->modelData != nullptr ? actor->modelData->modelDef != NAME_None ? PClass::FindActor(actor->modelData->modelDef) : actor->GetClass() : actor->GetClass(), translation, actor);
 	renderer->EndDrawModel(actor->RenderStyle, smf);
 }
 
-void RenderHUDModel(FModelRenderer *renderer, DPSprite *psp, float ofsX, float ofsY)
+void RenderHUDModel(FModelRenderer* renderer, DPSprite* psp, float ofsX, float ofsY)
 {
-	AActor * playermo = players[consoleplayer].camera;
-	FSpriteModelFrame *smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
+	AActor* playermo = players[consoleplayer].camera;
+	FSpriteModelFrame* smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
 
 	// [BB] No model found for this sprite, so we can't render anything.
 	if (smf == nullptr)
@@ -224,19 +225,19 @@ void RenderHUDModel(FModelRenderer *renderer, DPSprite *psp, float ofsX, float o
 	renderer->BeginDrawHUDModel(playermo->RenderStyle, objectToWorldMatrix, orientation < 0);
 	uint32_t trans = psp->GetTranslation() != 0 ? psp->GetTranslation() : 0;
 	if ((psp->Flags & PSPF_PLAYERTRANSLATED)) trans = psp->Owner->mo->Translation;
-	RenderFrameModels(renderer, playermo->Level, smf, psp->GetState(), psp->GetTics(), psp->Caller->GetClass(), trans);
+	RenderFrameModels(renderer, playermo->Level, smf, psp->GetState(), psp->GetTics(), psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), trans, psp->Caller);
 	renderer->EndDrawHUDModel(playermo->RenderStyle);
 }
 
-void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpriteModelFrame *smf, const FState *curState, const int curTics, const PClass *ti, int translation)
+void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, const PClass* ti, int translation, AActor* actor)
 {
 	// [BB] Frame interpolation: Find the FSpriteModelFrame smfNext which follows after smf in the animation
 	// and the scalar value inter ( element of [0,1) ), both necessary to determine the interpolated frame.
-	FSpriteModelFrame * smfNext = nullptr;
+	FSpriteModelFrame* smfNext = nullptr;
 	double inter = 0.;
 	if (gl_interpolate_model_frames && !(smf->flags & MDL_NOINTERPOLATION))
 	{
-		FState *nextState = curState->GetNextState();
+		FState* nextState = curState->GetNextState();
 		if (curState != nextState && nextState)
 		{
 			// [BB] To interpolate at more than 35 fps we take tic fractions into account.
@@ -258,7 +259,7 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 				// Most of the standard Doom monsters do this in their see state.
 				if ((smf->flags & MDL_INTERPOLATEDOUBLEDFRAMES))
 				{
-					const FState *prevState = curState - 1;
+					const FState* prevState = curState - 1;
 					if ((curState->sprite == prevState->sprite) && (curState->Frame == prevState->Frame))
 					{
 						inter /= 2.;
@@ -291,7 +292,7 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 	bool evaluatedSingle = false;
 
 	for (int i = 0; i < modelsamount; i++)
-	{	
+	{
 		int modelid = -1;
 		int animationid = -1;
 		int modelframe = -1;
@@ -345,7 +346,7 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 
 		if (modelid >= 0)
 		{
-			FModel * mdl = Models[modelid];
+			FModel* mdl = Models[modelid];
 			auto tex = skinid.isValid() ? TexMan.GetGameTexture(skinid, true) : nullptr;
 			mdl->BuildVertexBuffer(renderer);
 
@@ -354,7 +355,6 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 
 
 			bool nextFrame = smfNext && modelframe != modelframenext;
-			bool hasExternAnimation = false;
 
 			if (actor->boneComponentData == nullptr)
 			{
@@ -370,7 +370,7 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 				FModel* animation = Models[animationid];
 				const TArray<TRS>* animationData = animation->AttachAnimationData();
 
-				if ((!smf->flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
+				if (!(smf->flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
 				{
 					boneData = animation->CalculateBones(modelframe, nextFrame ? modelframenext : modelframe, nextFrame ? inter : 0.f, animationData, actor->boneComponentData, i);
 					boneStartingPosition = renderer->SetupFrame(animation, 0, 0, 0, boneData, -1);
@@ -413,13 +413,13 @@ void InitModels()
 	// First, create models for each voxel
 	for (unsigned i = 0; i < Voxels.Size(); i++)
 	{
-		FVoxelModel *md = new FVoxelModel(Voxels[i], false);
+		FVoxelModel* md = new FVoxelModel(Voxels[i], false);
 		Voxels[i]->VoxelIndex = Models.Push(md);
 	}
 	// now create GL model frames for the voxeldefs
 	for (unsigned i = 0; i < VoxelDefs.Size(); i++)
 	{
-		FVoxelModel *md = (FVoxelModel*)Models[VoxelDefs[i]->Voxel->VoxelIndex];
+		FVoxelModel* md = (FVoxelModel*)Models[VoxelDefs[i]->Voxel->VoxelIndex];
 		FSpriteModelFrame smf;
 		memset(&smf, 0, sizeof(smf));
 		smf.isVoxel = true;
@@ -433,9 +433,9 @@ void InitModels()
 		smf.animationIDs.Alloc(1);
 		smf.animationIDs[0] = -1;
 		smf.xscale = smf.yscale = smf.zscale = VoxelDefs[i]->Scale;
-		smf.angleoffset = VoxelDefs[i]->AngleOffset.Degrees();
+		smf.angleoffset = VoxelDefs[i]->AngleOffset.Degrees;
 		// this helps catching uninitialized data.
-		assert(VoxelDefs[i]->PitchFromMomentum == true || VoxelDefs[i]->PitchFromMomentum == false);
+		//assert(VoxelDefs[i]->PitchFromMomentum == true || VoxelDefs[i]->PitchFromMomentum == false);
 		if (VoxelDefs[i]->PitchFromMomentum) smf.flags |= MDL_PITCHFROMMOMENTUM;
 		if (VoxelDefs[i]->UseActorPitch) smf.flags |= MDL_USEACTORPITCH;
 		if (VoxelDefs[i]->UseActorRoll) smf.flags |= MDL_USEACTORROLL;
@@ -472,15 +472,15 @@ void InitModels()
 	}
 
 	// create a hash table for quick access
-	SpriteModelHash.Resize(SpriteModelFrames.Size ());
-	memset(SpriteModelHash.Data(), 0xff, SpriteModelFrames.Size () * sizeof(int));
+	SpriteModelHash.Resize(SpriteModelFrames.Size());
+	memset(SpriteModelHash.Data(), 0xff, SpriteModelFrames.Size() * sizeof(int));
 
-	for (unsigned int i = 0; i < SpriteModelFrames.Size (); i++)
+	for (unsigned int i = 0; i < SpriteModelFrames.Size(); i++)
 	{
-		int j = ModelFrameHash(&SpriteModelFrames[i]) % SpriteModelFrames.Size ();
+		int j = ModelFrameHash(&SpriteModelFrames[i]) % SpriteModelFrames.Size();
 
 		SpriteModelFrames[i].hashnext = SpriteModelHash[j];
-		SpriteModelHash[j]=i;
+		SpriteModelHash[j] = i;
 	}
 }
 
@@ -497,7 +497,7 @@ static void ParseModelDefLump(int Lump)
 
 			FSpriteModelFrame smf;
 			memset(&smf, 0, sizeof(smf));
-			smf.xscale=smf.yscale=smf.zscale=1.f;
+			smf.xscale = smf.yscale = smf.zscale = 1.f;
 
 			auto type = PClass::FindClass(sc.String);
 			if (!type || type->Defaults == nullptr)
@@ -528,10 +528,10 @@ static void ParseModelDefLump(int Lump)
 			}
 
 			const auto initArray = [](auto& array, const unsigned count, const auto value)
-			{
-				array.Alloc(count);
-				std::fill(array.begin(), array.end(), value);
-			};
+				{
+					array.Alloc(count);
+					std::fill(array.begin(), array.end(), value);
+				};
 
 			initArray(smf.modelIDs, smf.modelsAmount, -1);
 			initArray(smf.skinIDs, smf.modelsAmount, FNullTextureID());
@@ -549,7 +549,7 @@ static void ParseModelDefLump(int Lump)
 					sc.MustGetString();
 					FixPathSeperator(sc.String);
 					path = sc.String;
-					if (path[(int)path.Len()-1]!='/') path+='/';
+					if (path[(int)path.Len() - 1] != '/') path += '/';
 				}
 				else if (sc.Compare("model"))
 				{
@@ -605,7 +605,7 @@ static void ParseModelDefLump(int Lump)
 				else if (sc.Compare("zoffset"))
 				{
 					sc.MustGetFloat();
-					smf.zoffset=sc.Float;
+					smf.zoffset = sc.Float;
 				}
 				// Offset reading.
 				else if (sc.Compare("offset"))
@@ -715,8 +715,8 @@ static void ParseModelDefLump(int Lump)
 				else if (sc.Compare("skin"))
 				{
 					sc.MustGetNumber();
-					index=sc.Number;
-					if (index<0 || index>= smf.modelsAmount)
+					index = sc.Number;
+					if (index < 0 || index >= smf.modelsAmount)
 					{
 						sc.ScriptError("Too many models in %s", type->TypeName.GetChars());
 					}
@@ -724,7 +724,7 @@ static void ParseModelDefLump(int Lump)
 					FixPathSeperator(sc.String);
 					if (sc.Compare(""))
 					{
-						smf.skinIDs[index]=FNullTextureID();
+						smf.skinIDs[index] = FNullTextureID();
 					}
 					else
 					{
@@ -743,12 +743,12 @@ static void ParseModelDefLump(int Lump)
 					sc.MustGetNumber();
 					surface = sc.Number;
 
-					if (index<0 || index >= smf.modelsAmount)
+					if (index < 0 || index >= smf.modelsAmount)
 					{
 						sc.ScriptError("Too many models in %s", type->TypeName.GetChars());
 					}
 
-					if (surface<0 || surface >= MD3_MAX_SURFACES)
+					if (surface < 0 || surface >= MD3_MAX_SURFACES)
 					{
 						sc.ScriptError("Invalid MD3 Surface %d in %s", MD3_MAX_SURFACES, type->TypeName.GetChars());
 					}
@@ -772,15 +772,15 @@ static void ParseModelDefLump(int Lump)
 				}
 				else if (sc.Compare("frameindex") || sc.Compare("frame"))
 				{
-					bool isframe=!!sc.Compare("frame");
+					bool isframe = !!sc.Compare("frame");
 
 					sc.MustGetString();
 					smf.sprite = -1;
-					for (int i = 0; i < (int)sprites.Size (); ++i)
+					for (int i = 0; i < (int)sprites.Size(); ++i)
 					{
-						if (strnicmp (sprites[i].name, sc.String, 4) == 0)
+						if (strnicmp(sprites[i].name, sc.String, 4) == 0)
 						{
-							if (sprites[i].numframes==0)
+							if (sprites[i].numframes == 0)
 							{
 								//sc.ScriptError("Sprite %s has no frames", sc.String);
 							}
@@ -788,7 +788,7 @@ static void ParseModelDefLump(int Lump)
 							break;
 						}
 					}
-					if (smf.sprite==-1)
+					if (smf.sprite == -1)
 					{
 						sc.ScriptError("Unknown sprite %s in model definition for %s", sc.String, type->TypeName.GetChars());
 					}
@@ -797,8 +797,8 @@ static void ParseModelDefLump(int Lump)
 					FString framechars = sc.String;
 
 					sc.MustGetNumber();
-					index=sc.Number;
-					if (index<0 || index>= smf.modelsAmount)
+					index = sc.Number;
+					if (index < 0 || index >= smf.modelsAmount)
 					{
 						sc.ScriptError("Too many models in %s", type->TypeName.GetChars());
 					}
@@ -807,9 +807,9 @@ static void ParseModelDefLump(int Lump)
 						sc.MustGetString();
 						if (smf.modelIDs[index] != -1)
 						{
-							FModel *model = Models[smf.modelIDs[index]];
+							FModel* model = Models[smf.modelIDs[index]];
 							smf.modelframes[index] = model->FindFrame(sc.String);
-							if (smf.modelframes[index]==-1) sc.ScriptError("Unknown frame '%s' in %s", sc.String, type->TypeName.GetChars());
+							if (smf.modelframes[index] == -1) sc.ScriptError("Unknown frame '%s' in %s", sc.String, type->TypeName.GetChars());
 						}
 						else smf.modelframes[index] = -1;
 					}
@@ -819,20 +819,20 @@ static void ParseModelDefLump(int Lump)
 						smf.modelframes[index] = sc.Number;
 					}
 
-					for(int i=0; framechars[i]>0; i++)
+					for (int i = 0; framechars[i] > 0; i++)
 					{
-						char map[29]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-						int c = toupper(framechars[i])-'A';
+						char map[29] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
+						int c = toupper(framechars[i]) - 'A';
 
-						if (c<0 || c>=29)
+						if (c < 0 || c >= 29)
 						{
-							sc.ScriptError("Invalid frame character %c found", c+'A');
+							sc.ScriptError("Invalid frame character %c found", c + 'A');
 						}
 						if (map[c]) continue;
-						smf.frame=c;
+						smf.frame = c;
 						SpriteModelFrames.Push(smf);
 						GetDefaultByType(type)->hasmodel = true;
-						map[c]=1;
+						map[c] = 1;
 					}
 				}
 				else if (sc.Compare("dontcullbackfaces"))
@@ -876,38 +876,38 @@ static void ParseModelDefLump(int Lump)
 //
 //===========================================================================
 
-FSpriteModelFrame * FindModelFrame(const PClass * ti, int sprite, int frame, bool dropped)
+FSpriteModelFrame* FindModelFrame(const PClass* ti, int sprite, int frame, bool dropped)
 {
 	if (GetDefaultByType(ti)->hasmodel)
 	{
 		FSpriteModelFrame smf;
 
 		memset(&smf, 0, sizeof(smf));
-		smf.type=ti;
-		smf.sprite=sprite;
-		smf.frame=frame;
+		smf.type = ti;
+		smf.sprite = sprite;
+		smf.frame = frame;
 
 		int hash = SpriteModelHash[ModelFrameHash(&smf) % SpriteModelFrames.Size()];
 
-		while (hash>=0)
+		while (hash >= 0)
 		{
-			FSpriteModelFrame * smff = &SpriteModelFrames[hash];
-			if (smff->type==ti && smff->sprite==sprite && smff->frame==frame) return smff;
-			hash=smff->hashnext;
+			FSpriteModelFrame* smff = &SpriteModelFrames[hash];
+			if (smff->type == ti && smff->sprite == sprite && smff->frame == frame) return smff;
+			hash = smff->hashnext;
 		}
 	}
 
 	// Check for voxel replacements
 	if (r_drawvoxels)
 	{
-		spritedef_t *sprdef = &sprites[sprite];
+		spritedef_t* sprdef = &sprites[sprite];
 		if (frame < sprdef->numframes)
 		{
-			spriteframe_t *sprframe = &SpriteFrames[sprdef->spriteframes + frame];
+			spriteframe_t* sprframe = &SpriteFrames[sprdef->spriteframes + frame];
 			if (sprframe->Voxel != nullptr)
 			{
 				int index = sprframe->Voxel->VoxeldefIndex;
-				if (dropped && sprframe->Voxel->DroppedSpin !=sprframe->Voxel->PlacedSpin) index++;
+				if (dropped && sprframe->Voxel->DroppedSpin != sprframe->Voxel->PlacedSpin) index++;
 				return &SpriteModelFrames[index];
 			}
 		}
@@ -921,16 +921,16 @@ FSpriteModelFrame * FindModelFrame(const PClass * ti, int sprite, int frame, boo
 //
 //===========================================================================
 
-bool IsHUDModelForPlayerAvailable (player_t * player)
+bool IsHUDModelForPlayerAvailable(player_t* player)
 {
 	if (player == nullptr || player->psprites == nullptr)
 		return false;
 
 	// [MK] check that at least one psprite uses models
-	for (DPSprite *psp = player->psprites; psp != nullptr && psp->GetID() < PSP_TARGETCENTER; psp = psp->GetNext())
+	for (DPSprite* psp = player->psprites; psp != nullptr && psp->GetID() < PSP_TARGETCENTER; psp = psp->GetNext())
 	{
-		FSpriteModelFrame *smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
-		if ( smf != nullptr ) return true;
+		FSpriteModelFrame* smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
+		if (smf != nullptr) return true;
 	}
 	return false;
 }

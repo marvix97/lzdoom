@@ -8,8 +8,6 @@
 #include "dobject.h"
 #include "bonecomponents.h"
 
-IMPLEMENT_CLASS(DBoneComponents, false, false);
-
 
 IQMModel::IQMModel()
 {

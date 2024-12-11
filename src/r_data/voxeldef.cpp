@@ -61,6 +61,9 @@ struct VoxelOptions
 	double		Scale;
 	DAngle		AngleOffset;
 	bool		OverridePalette;
+	bool		PitchFromMomentum = false;
+	bool		UseActorPitch = false;
+	bool		UseActorRoll = false;
 };
 
 void VOX_AddVoxel(int sprnum, int frame, FVoxelDef* def);
@@ -179,6 +182,18 @@ static void VOX_ReadOptions(FScanner &sc, VoxelOptions &opts)
 		else if (sc.Compare("overridepalette"))
 		{
 			opts.OverridePalette = true;
+		}
+		else if (sc.Compare("pitchfrommomentum"))
+		{
+			opts.PitchFromMomentum = true;
+		}
+		else if (sc.Compare("useactorpitch"))
+		{
+			opts.UseActorPitch = true;
+		}
+		else if (sc.Compare("useactorroll"))
+		{
+			opts.UseActorRoll = true;
 		}
 		else
 		{
