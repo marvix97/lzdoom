@@ -158,6 +158,8 @@ CVAR (Int, cl_bloodtype, 0, CVAR_ARCHIVE);
 
 // CODE --------------------------------------------------------------------
 
+IMPLEMENT_CLASS(DActorModelData, false, false);
+IMPLEMENT_CLASS(DBoneComponents, false, false);
 IMPLEMENT_CLASS(AActor, false, true)
 
 IMPLEMENT_POINTERS_START(AActor)
@@ -172,6 +174,8 @@ IMPLEMENT_POINTERS_START(AActor)
 	IMPLEMENT_POINTER(Poisoner)
 	IMPLEMENT_POINTER(alternative)
 	IMPLEMENT_POINTER(ViewPos)
+	IMPLEMENT_POINTER(modelData)
+	IMPLEMENT_POINTER(boneComponentData)
 IMPLEMENT_POINTERS_END
 
 AActor::~AActor ()
