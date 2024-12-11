@@ -335,7 +335,7 @@ int FMD3Model::FindFrame(const char* name, bool nodefault)
 	{
 		if (!stricmp(name, Frames[i].Name)) return i;
 	}
-	return -1;
+	return FErr_NotFound;
 }
 
 //===========================================================================

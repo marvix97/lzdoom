@@ -349,22 +349,12 @@ void RenderFrameModels(FModelRenderer *renderer, FLevelLocals *Level, const FSpr
 			auto tex = skinid.isValid() ? TexMan.GetGameTexture(skinid, true) : nullptr;
 			mdl->BuildVertexBuffer(renderer);
 
-			mdl->PushSpriteMDLFrame(smf, i);
+			auto& ssids = surfaceskinids.Size() > 0 ? surfaceskinids : smf->surfaceskinIDs;
+			auto ssidp = (unsigned)(i * MD3_MAX_SURFACES) < ssids.Size() ? &ssids[i * MD3_MAX_SURFACES] : nullptr;
 
-			const TArray<TRS>* animationData = nullptr;
+			const TArray<VSMatrix>* animationData = nullptr;
 
-			bool nextFrame = smfNext && modelframe != modelframenext;
-
-			if (actor->boneComponentData == nullptr)
-			{
-				auto ptr = Create<DBoneComponents>();
-				ptr->trscomponents.Resize(modelsamount);
-				ptr->trsmatrix.Resize(modelsamount);
-				actor->boneComponentData = ptr;
-				GC::WriteBarrier(actor, ptr);
-			}
-
-			if (animationid >= 0)
+			if (smf->animationIDs[i] >= 0)
 			{
 				FModel* animation = Models[animationid];
 				animationData = animation->AttachAnimationData();
