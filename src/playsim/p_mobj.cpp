@@ -1355,6 +1355,24 @@ bool AActor::Massacre ()
 
 //----------------------------------------------------------------------------
 //
+// Serialize DActorModelData
+//
+//----------------------------------------------------------------------------
+
+void DActorModelData::Serialize(FSerializer& arc)
+{
+	Super::Serialize(arc);
+	arc("modelDef", modelDef)
+		("modelIDs", modelIDs)
+		("skinIDs", skinIDs)
+		("surfaceSkinIDs", surfaceSkinIDs)
+		("animationIDs", animationIDs)
+		("modelFrameGenerators", modelFrameGenerators)
+		("hasModel", hasModel);
+}
+
+//----------------------------------------------------------------------------
+//
 // PROC P_ExplodeMissile
 //
 //----------------------------------------------------------------------------
