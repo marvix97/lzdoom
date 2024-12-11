@@ -69,7 +69,7 @@ public:
 	virtual void AddSkins(uint8_t *hitlist) = 0;
 	virtual float getAspectFactor(float vscale) { return 1.f; }
 	virtual const TArray<TRS>* AttachAnimationData() { return nullptr; };
-	virtual const TArray<VSMatrix> CalculateBones(int frame1, int frame2, double inter, const TArray<TRS>& animationData, AActor* actor) { return {}; };
+	virtual const TArray<VSMatrix> CalculateBones(int frame1, int frame2, double inter, const TArray<TRS>& animationData, AActor* actor, int index) { return {}; };
 
 	void SetVertexBuffer(int type, IModelVertexBuffer *buffer) { mVBuf[type] = buffer; }
 	IModelVertexBuffer *GetVertexBuffer(int type) const { return mVBuf[type]; }
