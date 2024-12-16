@@ -68,12 +68,15 @@ EXTERN_CVAR(Int, gl_tonemap)
 EXTERN_CVAR(Int, screenblocks)
 EXTERN_CVAR(Bool, cl_capfps)
 
+//Temporarily disabled to make it compile with newer vk_mem_alloc.h
+
+/*
 CCMD(vk_memstats)
 {
 	if (screen->IsVulkan())
 	{
-		VmaStats stats = {};
-		vmaCalculateStats(static_cast<VulkanFrameBuffer*>(screen)->device->allocator, &stats);
+		VmaTotalStatistics stats = {};
+		vmaCalculateStatistics(static_cast<VulkanFrameBuffer*>(screen)->device->allocator, &stats);
 		Printf("Allocated objects: %d, used bytes: %d MB\n", (int)stats.total.allocationCount, (int)stats.total.usedBytes / (1024 * 1024));
 		Printf("Unused range count: %d, unused bytes: %d MB\n", (int)stats.total.unusedRangeCount, (int)stats.total.unusedBytes / (1024 * 1024));
 	}
@@ -82,6 +85,7 @@ CCMD(vk_memstats)
 		Printf("Vulkan is not the current render device\n");
 	}
 }
+*/
 
 CVAR(Bool, vk_raytrace, false, 0/*CVAR_ARCHIVE | CVAR_GLOBALCONFIG*/)
 
