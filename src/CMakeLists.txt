@@ -154,7 +154,11 @@ else()
 endif()
 
 if( NOT NO_OPENAL )
-	if ( NOT DYN_OPENAL )	# DYN_OPENAL uses local copies of the headers.
+	if ( "vcpkg-openal-soft" IN_LIST VCPKG_MANIFEST_FEATURES )
+		# Statically link to OpenAL from vcpkg
+		find_package( OpenAL CONFIG REQUIRED )
+		list( APPEND PROJECT_LIBRARIES OpenAL::OpenAL )
+	elseif ( NOT DYN_OPENAL )	# DYN_OPENAL uses local copies of the headers.
 		find_package( OpenAL )
 		mark_as_advanced(CLEAR OPENAL_INCLUDE_DIR)
 		if( OPENAL_INCLUDE_DIR )
@@ -351,7 +355,7 @@ if( UNIX )
 			add_definitions( -DNO_CLOCK_GETTIME )
 		endif()
 	else()
-		set( PROJECT_LIBRARIES ${PROJECT_LIBRARIES} rt )
+		list( APPEND PROJECT_LIBRARIES rt )
 	endif()
 endif()
 
@@ -1443,6 +1447,10 @@ add_custom_command(TARGET zdoom POST_BUILD
 	COMMAND ${CMAKE_COMMAND} -E copy_if_different
 	${CMAKE_SOURCE_DIR}/fm_banks/gs-by-papiezak-and-sneakernets.wopn $<TARGET_FILE_DIR:zdoom>/fm_banks/gs-by-papiezak-and-sneakernets.wopn
 )
+
+if (VCPKG_TOOLCHAIN)
+	x_vcpkg_install_local_dependencies(TARGETS zdoom DESTINATION ".")
+endif()
 
 if( WIN32 )
 	set( INSTALL_SOUNDFONT_PATH . CACHE STRING "Directory where soundfonts and WOPL/WOPN banks will be placed during install." )
