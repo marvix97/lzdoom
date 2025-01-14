@@ -5021,6 +5021,230 @@ DEFINE_ACTION_FUNCTION(AActor, A_SetMugshotState)
 	return 0;
 }
 
+//==========================================================================
+//
+// A_ChangeModel(modeldef, modelpath, model, modelindex, skinpath, skin, skinid, flags)
+//
+// This function allows the changing of an actor's modeldef, or models and/or skins at a given index
+//==========================================================================
+
+enum ChangeModelFlags
+{
+	CMDL_WEAPONTOPLAYER = 1,
+	CMDL_HIDEMODEL = 1 << 1,
+	CMDL_USESURFACESKIN = 1 << 2,
+};
+
+void ChangeModelNative(
+	AActor * self,
+	AActor * invoker,
+	FStateParamInfo * stateinfo,
+	FName modeldef,
+	int i_modelindex,
+	const FString &p_modelpath,
+	FName model,
+	int i_skinindex,
+	const FString &p_skinpath,
+	FName skin,
+	int flags,
+	int generatorindex,
+	int i_animationindex,
+	const FString &p_animationpath,
+	FName animation
+) {
+	if(!self) ThrowAbortException(X_READ_NIL, "In function parameter self");
+
+	if (modeldef != NAME_None && PClass::FindClass(modeldef.GetChars()) == nullptr)
+	{
+		Printf("Attempt to pass invalid modeldef name %s in %s.", modeldef.GetChars(), self->GetCharacterName());
+		return;
+	}
+
+	unsigned modelindex = i_modelindex < 0 ? 0 : i_modelindex;
+	unsigned skinindex = i_skinindex < 0 ? 0 : i_skinindex;
+	unsigned animationindex = i_animationindex < 0 ? 0 : i_animationindex;
+
+	AActor* mobj = (ACTION_CALL_FROM_PSPRITE() && (flags & CMDL_WEAPONTOPLAYER)) || ACTION_CALL_FROM_INVENTORY() ? self : invoker;
+
+	FString modelpath = p_modelpath;
+	FString skinpath = p_skinpath;
+	FString animationpath = p_animationpath;
+
+	if (modelpath.Len() != 0 && modelpath[(int)modelpath.Len() - 1] != '/') modelpath += '/';
+	if (skinpath.Len() != 0 && skinpath[(int)skinpath.Len() - 1] != '/') skinpath += '/';
+	if (animationpath.Len() != 0 && animationpath[(int)animationpath.Len() - 1] != '/') animationpath += '/';
+
+	if (mobj->modelData == nullptr)
+	{
+		auto ptr = Create<DActorModelData>();
+
+		ptr->hasModel = mobj->hasmodel;
+		ptr->modelDef = NAME_None;
+
+		mobj->modelData = ptr;
+		mobj->hasmodel = true;
+		GC::WriteBarrier(mobj, ptr);
+	};
+
+	unsigned skinPosition = skinindex + modelindex * MD3_MAX_SURFACES;
+
+	int queryModel = !(flags & CMDL_HIDEMODEL) ? model != NAME_None ? FindModel(modelpath.GetChars(), model.GetChars()) : -1 : -2;
+	int queryAnimation = animation != NAME_None ? FindModel(animationpath.GetChars(), animation.GetChars()) : -1;
+
+	mobj->modelData->modelDef = modeldef;
+
+	assert(mobj->modelData->modelIDs.Size() == mobj->modelData->modelFrameGenerators.Size());
+
+	if(mobj->modelData->modelIDs.Size() < modelindex)
+	{
+		mobj->modelData->modelIDs.AppendFill(-1, modelindex - mobj->modelData->modelIDs.Size());
+		mobj->modelData->modelFrameGenerators.AppendFill(-1, modelindex - mobj->modelData->modelFrameGenerators.Size());
+	}
+
+	if(mobj->modelData->animationIDs.Size() < animationindex)
+	{
+		mobj->modelData->animationIDs.AppendFill(-1, animationindex - mobj->modelData->animationIDs.Size());
+	}
+
+	if(flags & CMDL_USESURFACESKIN)
+	{
+		if(mobj->modelData->surfaceSkinIDs.Size() < skinPosition)
+		{
+			mobj->modelData->surfaceSkinIDs.AppendFill(FNullTextureID(), skinPosition - mobj->modelData->surfaceSkinIDs.Size());
+		}
+	}
+	else if(mobj->modelData->skinIDs.Size() < skinindex)
+	{
+		mobj->modelData->skinIDs.AppendFill(FNullTextureID(), skinindex - mobj->modelData->skinIDs.Size());
+	}
+
+	if(mobj->modelData->modelIDs.Size() == modelindex)
+	{
+		mobj->modelData->modelIDs.Push(queryModel);
+		mobj->modelData->modelFrameGenerators.Push(generatorindex);
+	}
+	else
+	{
+		mobj->modelData->modelIDs[modelindex] = queryModel;
+		mobj->modelData->modelFrameGenerators[modelindex] = generatorindex;
+	}
+
+	if(mobj->modelData->animationIDs.Size() == animationindex)
+	{
+		mobj->modelData->animationIDs.Push(queryAnimation);
+	}
+	else
+	{
+		mobj->modelData->animationIDs[animationindex] = queryAnimation;
+	}
+
+	auto skindata = skin != NAME_None ? LoadSkin(skinpath.GetChars(), skin.GetChars()) : FNullTextureID();
+
+	if (flags & CMDL_USESURFACESKIN)
+	{
+		if(mobj->modelData->surfaceSkinIDs.Size() == skinPosition)
+		{
+			mobj->modelData->surfaceSkinIDs.Push(skindata);
+		}
+		else
+		{
+			mobj->modelData->surfaceSkinIDs[skinPosition] = skindata;
+		}
+	}
+	else
+	{
+		if(mobj->modelData->skinIDs.Size() == skinindex)
+		{
+			mobj->modelData->skinIDs.Push(skindata);
+		}
+		else
+		{
+			mobj->modelData->skinIDs[skinindex] = skindata;
+		}
+	}
+
+	//[SM] - We need to serialize file paths and model names so that they are pushed on loading save files. Likewise, let's not include models that were already parsed when initialized.
+	if (queryModel >= 0)
+	{
+		FString fullName;
+		fullName.Format("%s%s", modelpath.GetChars(), model.GetChars());
+		bool found = false;
+
+		for (auto &m : savedModelFiles) 
+		{
+			if(m.CompareNoCase(fullName) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found) for (auto &m : Models)
+		{
+			if (m->mFileName.CompareNoCase(fullName) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found) savedModelFiles.Push(fullName);
+	}
+	//Same for animations
+	if (queryAnimation >= 0)
+	{
+		FString fullName;
+		fullName.Format("%s%s", animationpath.GetChars(), animation.GetChars());
+		bool found = false;
+
+		for (auto &m : savedModelFiles) 
+		{
+			if(m.CompareNoCase(fullName) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found) for (auto &m : Models)
+		{
+			if (m->mFileName.CompareNoCase(fullName) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+		if(!found) savedModelFiles.Push(fullName);
+	}
+
+	if (mobj->modelData->modelIDs.Size() == 0 && mobj->modelData->modelFrameGenerators.Size() == 0 && mobj->modelData->skinIDs.Size() == 0 && mobj->modelData->surfaceSkinIDs.Size() == 0 && mobj->modelData->animationIDs.Size() == 0 && modeldef == NAME_None)
+	{
+		mobj->hasmodel = mobj->modelData->hasModel;
+		mobj->modelData->Destroy();
+		mobj->modelData = nullptr;
+	}
+
+	return;
+}
+
+DEFINE_ACTION_FUNCTION_NATIVE(AActor, A_ChangeModel, ChangeModelNative)
+{
+	PARAM_ACTION_PROLOGUE(AActor);
+	PARAM_NAME(modeldef);
+	PARAM_INT(modelindex);
+	PARAM_STRING_VAL(modelpath);
+	PARAM_NAME(model);
+	PARAM_INT(skinindex);
+	PARAM_STRING_VAL(skinpath);
+	PARAM_NAME(skin);
+	PARAM_INT(flags);
+	PARAM_INT(generatorindex);
+	PARAM_INT(animationindex);
+	PARAM_STRING_VAL(animationpath);
+	PARAM_NAME(animation);
+	
+	ChangeModelNative(self,stateowner,stateinfo,modeldef,modelindex,modelpath,model,skinindex,skinpath,skin,flags,generatorindex,animationindex,animationpath,animation);
+
+	return 0;
+}
+
 // This needs to account for the fact that internally renderstyles are stored as a series of operations, 
 // but the script side only cares about symbolic constants.
 DEFINE_ACTION_FUNCTION(AActor, GetRenderStyle)

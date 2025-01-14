@@ -80,8 +80,9 @@ enum
 	REGT_KONST		= 4,
 	REGT_MULTIREG2	= 8,
 	REGT_MULTIREG3	= 16,	// (e.g. a vector)
-	REGT_MULTIREG	= 24,
+	REGT_MULTIREG	= 8 | 16 | 64,
 	REGT_ADDROF		= 32,	// used with PARAM: pass address of this register
+	REGT_MULTIREG4	= 64,
 
 	REGT_NIL		= 128	// parameter was omitted
 };
@@ -131,7 +132,7 @@ struct VMReturn
 		*(double *)Location = val;
 	}
 	void SetVector(const double val[3])
-	{	
+	{
 		assert(RegType == (REGT_FLOAT|REGT_MULTIREG3));
 		((double *)Location)[0] = val[0];
 		((double *)Location)[1] = val[1];
@@ -168,6 +169,12 @@ struct VMReturn
 		*(void **)Location = val;
 	}
 
+	void SetConstPointer(const void *val)
+	{
+		assert(RegType == REGT_POINTER);
+		*(const void **)Location = val;
+	}
+
 	void SetObject(DObject *val)
 	{
 		assert(RegType == REGT_POINTER);
@@ -189,6 +196,11 @@ struct VMReturn
 		Location = loc;
 		RegType = REGT_FLOAT | REGT_MULTIREG2;
 	}
+	void Vec3At(DVector3 *loc)
+	{
+		Location = loc;
+		RegType = REGT_FLOAT | REGT_MULTIREG3;
+	}
 	void StringAt(FString *loc)
 	{
 		Location = loc;
@@ -203,6 +215,7 @@ struct VMReturn
 	VMReturn(int *loc) { IntAt(loc); }
 	VMReturn(double *loc) { FloatAt(loc); }
 	VMReturn(DVector2 *loc) { Vec2At(loc); }
+	VMReturn(DVector3 *loc) { Vec3At(loc); }
 	VMReturn(FString *loc) { StringAt(loc); }
 	VMReturn(void **loc) { PointerAt(loc); }
 };
@@ -312,6 +325,10 @@ struct VMValue
 		biggest = o.biggest;
 	}
 	VMValue(int v)
+	{
+		i = v;
+	}
+	VMValue(unsigned int v)
 	{
 		i = v;
 	}
@@ -573,6 +590,7 @@ namespace
 	template<typename T> struct native_is_valid<T&> { static const bool value = true; static const bool retval = true; };
 	template<> struct native_is_valid<void> { static const bool value = true; static const bool retval = true; };
 	template<> struct native_is_valid<int> { static const bool value = true;  static const bool retval = true; };
+	template<> struct native_is_valid<FName> { static const bool value = true;  static const bool retval = true; static_assert(sizeof(FName) == sizeof(int)); };
 	template<> struct native_is_valid<unsigned int> { static const bool value = true; static const bool retval = true; };
 	template<> struct native_is_valid<double> { static const bool value = true; static const bool retval = true; };
 	template<> struct native_is_valid<bool> { static const bool value = true; static const bool retval = false;};	// Bool as return does not work!
@@ -583,25 +601,7 @@ struct DirectNativeDesc
 {
 	DirectNativeDesc() = default;
 
-	#define TP(n) typename P##n
-	#define VP(n) ValidateType<P##n>()
-	template<typename Ret> DirectNativeDesc(Ret(*func)()) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); }
-	template<typename Ret, TP(1)> DirectNativeDesc(Ret(*func)(P1)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); }
-	template<typename Ret, TP(1), TP(2)> DirectNativeDesc(Ret(*func)(P1,P2)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); }
-	template<typename Ret, TP(1), TP(2), TP(3)> DirectNativeDesc(Ret(*func)(P1,P2,P3)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9), TP(10)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9, P10)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); VP(10); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9), TP(10), TP(11)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); VP(10); VP(11); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9), TP(10), TP(11), TP(12)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); VP(10); VP(11); VP(12); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9), TP(10), TP(11), TP(12), TP(13)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); VP(10); VP(11); VP(12); VP(13); }
-	template<typename Ret, TP(1), TP(2), TP(3), TP(4), TP(5), TP(6), TP(7), TP(8), TP(9), TP(10), TP(11), TP(12), TP(13), TP(14)> DirectNativeDesc(Ret(*func)(P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, P14)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); VP(1); VP(2); VP(3); VP(4); VP(5); VP(6); VP(7); VP(8); VP(9); VP(10); VP(11); VP(12); VP(13), VP(14); }
-	#undef TP
-	#undef VP
+	template<typename Ret, typename... Params> DirectNativeDesc(Ret(*func)(Params...)) : Ptr(reinterpret_cast<void*>(func)) { ValidateRet<Ret>(); (ValidateType<Params>(), ...); }
 
 	template<typename T> void ValidateType() { static_assert(native_is_valid<T>::value, "Argument type is not valid as a direct native parameter or return type"); }
 	template<typename T> void ValidateRet() { static_assert(native_is_valid<T>::retval, "Return type is not valid as a direct native parameter or return type"); }
@@ -720,6 +720,7 @@ struct AFuncDesc
 class AActor;
 
 #define ACTION_RETURN_STATE(v) do { FState *state = v; if (numret > 0) { assert(ret != NULL); ret->SetPointer(state); return 1; } return 0; } while(0)
+#define ACTION_RETURN_CONST_POINTER(v) do { const void *state = v; if (numret > 0) { assert(ret != NULL); ret->SetConstPointer(state); return 1; } return 0; } while(0)
 #define ACTION_RETURN_POINTER(v) do { void *state = v; if (numret > 0) { assert(ret != NULL); ret->SetPointer(state); return 1; } return 0; } while(0)
 #define ACTION_RETURN_OBJECT(v) do { auto state = v; if (numret > 0) { assert(ret != NULL); ret->SetObject(state); return 1; } return 0; } while(0)
 #define ACTION_RETURN_FLOAT(v) do { double u = v; if (numret > 0) { assert(ret != nullptr); ret->SetFloat(u); return 1; } return 0; } while(0)

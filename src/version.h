@@ -99,9 +99,9 @@ const char *GetVersionString();
 #define VR3D_ENABLED
 
 // More stuff that needs to be different for derivatives.
-#define GAMENAME "LZDoom"
-#define WGAMENAME L"LZDoom"
-#define GAMENAMELOWERCASE "lzdoom"
+#define GAMENAME "GrezzoParty"
+#define WGAMENAME L"GrezzoParty"
+#define GAMENAMELOWERCASE "grezzoparty"
 #define FORUM_URL "http://forum.zdoom.org/"
 #define BUGS_FORUM_URL	"http://forum.zdoom.org/viewforum.php?f=2"
 
