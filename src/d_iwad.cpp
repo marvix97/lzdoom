@@ -827,8 +827,8 @@ const FIWADInfo *FIWadManager::FindIWAD(TArray<FString> &wadfiles, const char *i
 	if (GameStartupInfo.Name.IsEmpty())
 	{
 		GameStartupInfo.Name = iwad_info->Name;
-		if (iwad_info->gametype == GAME_Doom)
-			GameStartupInfo.Name << " v" << VERSIONSTR;
+/* 		if (iwad_info->gametype == GAME_Doom)
+			GameStartupInfo.Name << " v" << VERSIONSTR; */
 	}
 	if (GameStartupInfo.BkColor == 0 && GameStartupInfo.FgColor == 0)
 	{
