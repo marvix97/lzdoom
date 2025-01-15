@@ -1,0 +1,17 @@
+{
+    "files.associations": {
+        "*.ipp": "cpp",
+        "*.tcc": "cpp",
+        "complex": "cpp",
+        "fstream": "cpp",
+        "iomanip": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "regex": "cpp",
+        "*.def": "cpp",
+        "*.rh": "cpp",
+        "*.inc": "cpp",
+        "cmath": "cpp",
+        "random": "cpp"
+    }
+}
