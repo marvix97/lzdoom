@@ -248,9 +248,9 @@ void FUE1Model::RenderFrame( FModelRenderer *renderer, FGameTexture *skin, int f
 		FGameTexture *sskin = skin;
 		if ( !sskin )
 		{
-			int ssIndex = groups[i].texNum + curMDLIndex * MD3_MAX_SURFACES;
-			if (curSpriteMDLFrame && curSpriteMDLFrame->surfaceskinIDs[ssIndex].isValid())
-				sskin = TexMan.GetGameTexture(curSpriteMDLFrame->surfaceskinIDs[ssIndex], true);
+			int ssIndex = groups[i].texNum;
+			if (surfaceskinids && surfaceskinids[ssIndex].isValid())
+				sskin = TexMan.GetGameTexture(surfaceskinids[ssIndex], true);
 			if ( !sskin )
 			{
 				vofs += vsize;

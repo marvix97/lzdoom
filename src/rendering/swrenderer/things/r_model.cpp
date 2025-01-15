@@ -225,7 +225,7 @@ namespace swrenderer
 		}
 	}
 
-	void SWModelRenderer::BeginDrawModel(FRenderStyale style, FSpriteModelFrame *smf, const VSMatrix &objectToWorldMatrix, bool mirrored)
+	void SWModelRenderer::BeginDrawModel(FRenderStyale style, int smf_flags, const VSMatrix &objectToWorldMatrix, bool mirrored)
 	{
 		const_cast<VSMatrix &>(objectToWorldMatrix).copy(ObjectToWorld.Matrix);
 

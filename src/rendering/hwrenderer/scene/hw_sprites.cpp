@@ -490,7 +490,7 @@ bool HWSprite::CalculateVertices(HWDrawInfo *di, FVector3 *v, DVector3 *vp)
 inline void HWSprite::PutSprite(HWDrawInfo *di, bool translucent)
 {
 	// That's a lot of checks...
-	if (modelframe && !modelframe->isVoxel && !(modelframe->flags & MDL_NOPERPIXELLIGHTING) && RenderStyle.BlendOp != STYLEOP_Shadow && gl_light_sprites && di->Level->HasDynamicLights && !di->isFullbrightScene() && !fullbright)
+	if (modelframe && !modelframe->isVoxel && !(modelframeflags & MDL_NOPERPIXELLIGHTING) && RenderStyle.BlendOp != STYLEOP_Shadow && gl_light_sprites && di->Level->HasDynamicLights && !di->isFullbrightScene() && !fullbright)
 	{
 		hw_GetDynModelLight(actor, lightdata);
 		dynlightindex = screen->mLights->UploadLights(lightdata);
@@ -505,6 +505,7 @@ inline void HWSprite::PutSprite(HWDrawInfo *di, bool translucent)
 	}
 	di->AddSprite(this, translucent);
 }
+
 
 //==========================================================================
 //
@@ -778,6 +779,9 @@ void HWSprite::Process(HWDrawInfo *di, AActor* thing, sector_t * sector, area_t 
 		if (thruportal == 1) viewpos += di->Level->Displacements.getOffset(viewmaster->Sector->PortalGroup, sector->PortalGroup);
 		if (fabs(viewpos.X - vp.Pos.X) < 32 && fabs(viewpos.Y - vp.Pos.Y) < 32) return;
 	}
+	
+	modelframe = isPicnumOverride ? nullptr : FindModelFrame(thing->GetClass(), spritenum, thing->frame, !!(thing->flags & MF_DROPPED));
+	modelframeflags = modelframe ? modelframe->getFlags(thing->modelData) : 0;
 
 	// Too close to the camera. This doesn't look good if it is a sprite.
 	if (fabs(thingpos.X - vp.Pos.X) < 2 && fabs(thingpos.Y - vp.Pos.Y) < 2)

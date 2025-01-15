@@ -43,7 +43,8 @@
 #include "i_time.h"
 #include "texturemanager.h"
 #include "modelrenderer.h"
-
+#include "actor.h"
+#include "actorinlines.h"
 
 #ifdef _MSC_VER
 #pragma warning(disable:4244) // warning C4244: conversion from 'double' to 'float', possible loss of data
@@ -55,15 +56,17 @@ EXTERN_CVAR(Bool, r_drawvoxels)
 extern TDeletingArray<FVoxel*> Voxels;
 extern TDeletingArray<FVoxelDef*> VoxelDefs;
 
-void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, const PClass* ti, int translation, AActor* actor);
+void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, int translation, AActor* actor);
 
 
 void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteModelFrame* smf, AActor* actor, double ticFrac)
 {
 	// Setup transformation.
 
+	int smf_flags = smf->getFlags(actor->modelData);
+
 	int translation = 0;
-	if (!(smf->flags & MDL_IGNORETRANSLATION))
+	if (!(smf_flags & MDL_IGNORETRANSLATION))
 		translation = actor->Translation;
 
 	// y scale for a sprite means height, i.e. z in the world!
@@ -81,7 +84,7 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 	float angle = angles.Yaw.Degrees;
 
 	// [BB] Workaround for the missing pitch information.
-	if ((smf->flags & MDL_PITCHFROMMOMENTUM))
+	if ((smf_flags & MDL_PITCHFROMMOMENTUM))
 	{
 		const double x = actor->Vel.X;
 		const double y = actor->Vel.Y;
@@ -101,7 +104,7 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 		}
 	}
 
-	if (smf->flags & MDL_ROTATING)
+	if (smf_flags & MDL_ROTATING)
 	{
 		if (smf->rotationSpeed > 0.0000000001 || smf->rotationSpeed < -0.0000000001)
 		{
@@ -117,13 +120,13 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 
 	// Added MDL_USEACTORPITCH and MDL_USEACTORROLL flags processing.
 	// If both flags MDL_USEACTORPITCH and MDL_PITCHFROMMOMENTUM are set, the pitch sums up the actor pitch and the velocity vector pitch.
-	if (smf->flags & MDL_USEACTORPITCH)
+	if (smf_flags & MDL_USEACTORPITCH)
 	{
 		double d = angles.Pitch.Degrees;
-		if (smf->flags & MDL_BADROTATION) pitch += d;
+		if (smf_flags & MDL_BADROTATION) pitch += d;
 		else pitch -= d;
 	}
-	if (smf->flags & MDL_USEACTORROLL) roll += angles.Roll.Degrees;
+	if (smf_flags & MDL_USEACTORROLL) roll += angles.Roll.Degrees;
 
 	VSMatrix objectToWorldMatrix;
 	objectToWorldMatrix.loadIdentity();
@@ -136,14 +139,14 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 
 	// Applying model transformations:
 	// 1) Applying actor angle, pitch and roll to the model
-	if (smf->flags & MDL_USEROTATIONCENTER)
+	if (smf_flags & MDL_USEROTATIONCENTER)
 	{
 		objectToWorldMatrix.translate(smf->rotationCenterX, smf->rotationCenterZ, smf->rotationCenterY);
 	}
 	objectToWorldMatrix.rotate(-angle, 0, 1, 0);
 	objectToWorldMatrix.rotate(pitch, 0, 0, 1);
 	objectToWorldMatrix.rotate(-roll, 1, 0, 0);
-	if (smf->flags & MDL_USEROTATIONCENTER)
+	if (smf_flags & MDL_USEROTATIONCENTER)
 	{
 		objectToWorldMatrix.translate(-smf->rotationCenterX, -smf->rotationCenterZ, -smf->rotationCenterY);
 	}
@@ -151,7 +154,7 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 	// 2) Applying Doomsday like rotation of the weapon pickup models
 	// The rotation angle is based on the elapsed time.
 
-	if (smf->flags & MDL_ROTATING)
+	if (smf_flags & MDL_ROTATING)
 	{
 		objectToWorldMatrix.translate(smf->rotationCenterX, smf->rotationCenterY, smf->rotationCenterZ);
 		objectToWorldMatrix.rotate(rotateOffset, smf->xrotate, smf->yrotate, smf->zrotate);
@@ -176,15 +179,15 @@ void RenderModel(FModelRenderer* renderer, float x, float y, float z, FSpriteMod
 
 	float orientation = scaleFactorX * scaleFactorY * scaleFactorZ;
 
-	renderer->BeginDrawModel(actor->RenderStyle, smf, objectToWorldMatrix, orientation < 0);
-	RenderFrameModels(renderer, actor->Level, smf, actor->state, actor->tics, actor->modelData != nullptr ? actor->modelData->modelDef != NAME_None ? PClass::FindActor(actor->modelData->modelDef) : actor->GetClass() : actor->GetClass(), translation, actor);
-	renderer->EndDrawModel(actor->RenderStyle, smf);
+	renderer->BeginDrawModel(actor->RenderStyle, smf_flags, objectToWorldMatrix, orientation < 0);
+	RenderFrameModels(renderer, actor->Level, smf, actor->state, actor->tics, translation, actor);
+	renderer->EndDrawModel(actor->RenderStyle, smf_flags);
 }
 
-void RenderHUDModel(FModelRenderer* renderer, DPSprite* psp, float ofsX, float ofsY)
+void RenderHUDModel(FModelRenderer* renderer, DPSprite* psp, float ofsX, float ofsY, FSpriteModelFrame *smf)
 {
 	AActor* playermo = players[consoleplayer].camera;
-	FSpriteModelFrame* smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
+	int smf_flags = smf->getFlags(psp->Caller->modelData);
 
 	// [BB] No model found for this sprite, so we can't render anything.
 	if (smf == nullptr)
@@ -196,7 +199,7 @@ void RenderHUDModel(FModelRenderer* renderer, DPSprite* psp, float ofsX, float o
 
 	// [Nash] Optional scale weapon FOV
 	float fovscale = 1.0f;
-	if (smf->flags & MDL_SCALEWEAPONFOV)
+	if (smf_flags & MDL_SCALEWEAPONFOV)
 	{
 		fovscale = tan(players[consoleplayer].DesiredFOV * (0.5f * M_PI / 180.f));
 		fovscale = 1.f + (fovscale - 1.f) * cl_scaleweaponfov;
@@ -222,20 +225,24 @@ void RenderHUDModel(FModelRenderer* renderer, DPSprite* psp, float ofsX, float o
 
 	float orientation = smf->xscale * smf->yscale * smf->zscale;
 
-	renderer->BeginDrawHUDModel(playermo->RenderStyle, objectToWorldMatrix, orientation < 0);
+	renderer->BeginDrawHUDModel(playermo->RenderStyle, objectToWorldMatrix, orientation < 0, smf_flags);
 	uint32_t trans = psp->GetTranslation() != 0 ? psp->GetTranslation() : 0;
 	if ((psp->Flags & PSPF_PLAYERTRANSLATED)) trans = psp->Owner->mo->Translation;
-	RenderFrameModels(renderer, playermo->Level, smf, psp->GetState(), psp->GetTics(), psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), trans, psp->Caller);
-	renderer->EndDrawHUDModel(playermo->RenderStyle);
+	RenderFrameModels(renderer, playermo->Level, smf, psp->GetState(), psp->GetTics(), trans, psp->Caller);
+	renderer->EndDrawHUDModel(playermo->RenderStyle, smf_flags);
 }
 
-void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, const PClass* ti, int translation, AActor* actor)
+void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpriteModelFrame* smf, const FState* curState, const int curTics, int translation, AActor* actor)
 {
 	// [BB] Frame interpolation: Find the FSpriteModelFrame smfNext which follows after smf in the animation
 	// and the scalar value inter ( element of [0,1) ), both necessary to determine the interpolated frame.
+
+	int smf_flags = smf->getFlags(actor->modelData);
+
 	FSpriteModelFrame* smfNext = nullptr;
 	double inter = 0.;
-	if (gl_interpolate_model_frames && !(smf->flags & MDL_NOINTERPOLATION))
+	
+	if (gl_interpolate_model_frames && !(smf_flags & MDL_NOINTERPOLATION))
 	{
 		FState* nextState = curState->GetNextState();
 		if (curState != nextState && nextState)
@@ -257,7 +264,7 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 			{
 				// [BB] Workaround for actors that use the same frame twice in a row.
 				// Most of the standard Doom monsters do this in their see state.
-				if ((smf->flags & MDL_INTERPOLATEDOUBLEDFRAMES))
+				if ((smf_flags & MDL_INTERPOLATEDOUBLEDFRAMES))
 				{
 					const FState* prevState = curState - 1;
 					if ((curState->sprite == prevState->sprite) && (curState->Frame == prevState->Frame))
@@ -272,7 +279,7 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 					}
 				}
 				if (nextState && inter != 0.0)
-					smfNext = FindModelFrame(ti, nextState->sprite, nextState->Frame, false);
+					smfNext = FindModelFrame((actor->modelData != nullptr && actor->modelData->modelDef != nullptr) ? actor->modelData->modelDef : actor->GetClass(), nextState->sprite, nextState->Frame, false);
 			}
 		}
 	}
@@ -281,8 +288,8 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 	//[SM] - if we added any models for the frame to also render, then we also need to update modelsAmount for this smf
 	if (actor->modelData != nullptr)
 	{
-		if (actor->modelData->modelIDs.Size() > (unsigned)modelsamount)
-			modelsamount = actor->modelData->modelIDs.Size();
+		if (actor->modelData->models.Size() > modelsamount)
+			modelsamount = actor->modelData->models.Size();
 	}
 
 	TArray<FTextureID> surfaceskinids;
@@ -302,73 +309,77 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 		surfaceskinids.Clear();
 		if (actor->modelData != nullptr)
 		{
-			if (i < (int)actor->modelData->modelIDs.Size())
-				modelid = actor->modelData->modelIDs[i];
+			//modelID
+			if (actor->modelData->models.Size() > i && actor->modelData->models[i].modelID >= 0)
+			{
+				modelid = actor->modelData->models[i].modelID;
+			}
+			else if(actor->modelData->models.Size() > i && actor->modelData->models[i].modelID == -2)
+			{
+				continue;
+			}
+			else if(smf->modelsAmount > i)
+			{
+				modelid = smf->modelIDs[i];
+			}
 
-			if (i < (int)actor->modelData->animationIDs.Size())
+			//animationID
+			if (actor->modelData->animationIDs.Size() > i && actor->modelData->animationIDs[i] >= 0)
+			{
 				animationid = actor->modelData->animationIDs[i];
-
-			if (i < (int)actor->modelData->modelFrameGenerators.Size())
-			{
-				//[SM] - We will use this little snippet to allow a modder to specify a model index to clone. It's also pointless to clone something that clones something else in this case. And causes me headaches.
-				if (actor->modelData->modelFrameGenerators[i] >= 0 && actor->modelData->modelFrameGenerators[i] <= modelsamount && smf->modelframes[actor->modelData->modelFrameGenerators[i]] != -1)
-				{
-					modelframe = smf->modelframes[actor->modelData->modelFrameGenerators[i]];
-					if (smfNext) modelframenext = smfNext->modelframes[actor->modelData->modelFrameGenerators[i]];
-				}
 			}
-			if (i < (int)actor->modelData->skinIDs.Size())
+			else if(smf->modelsAmount > i)
 			{
-				if (actor->modelData->skinIDs[i].isValid())
-					skinid = actor->modelData->skinIDs[i];
+				animationid = smf->animationIDs[i];
 			}
 
-			unsigned sz1 = smf->surfaceskinIDs.Size();
-			unsigned sz2 = actor->modelData->surfaceSkinIDs.Size();
-			unsigned end = (i + 1) * MD3_MAX_SURFACES;
-
-			if(actor->modelData->surfaceSkinIDs.Size() > 0)
+			//skinID
+			if (actor->modelData->skinIDs.Size() > i && actor->modelData->skinIDs[i].isValid())
 			{
-				long last_ok = -1;
-				surfaceskinids.Resize(actor->modelData->surfaceSkinIDs.Size());
-				for (unsigned surface = i * MD3_MAX_SURFACES; surface < end; surface++)
-				{
-					if (surface >= sz2) break;
+				skinid = actor->modelData->skinIDs[i];
+			}
+			else if(smf->modelsAmount > i)
+			{
+				skinid = smf->skinIDs[i];
+			}
 
-					if (actor->modelData->surfaceSkinIDs[surface].isValid())
+			//surfaceSkinIDs
+			if(actor->modelData->models.Size() > i && actor->modelData->models[i].surfaceSkinIDs.Size() > 0)
+			{
+				unsigned sz1 = smf->surfaceskinIDs.Size();
+				unsigned sz2 = actor->modelData->models[i].surfaceSkinIDs.Size();
+				unsigned start = i * MD3_MAX_SURFACES;
+
+				surfaceskinids = actor->modelData->models[i].surfaceSkinIDs;
+				surfaceskinids.Resize(MD3_MAX_SURFACES);
+
+				for (unsigned surface = 0; surface < MD3_MAX_SURFACES; surface++)
+				{
+					if (sz2 > surface && (actor->modelData->models[i].surfaceSkinIDs[surface].isValid()))
 					{
-						surfaceskinids[surface] = actor->modelData->surfaceSkinIDs[surface];
-						last_ok = surface;
+						continue;
 					}
-					else if(surface < sz1)
+					if((surface + start) < sz1)
 					{
-						surfaceskinids[surface] = smf->surfaceskinIDs[surface];
+						surfaceskinids[surface] = smf->surfaceskinIDs[surface + start];
 					}
 					else
 					{
-						surfaceskinids[surface].SetInvalid();
+						surfaceskinids[surface].SetNull();
 					}
-				}
-				if(last_ok >= 0)
-				{
-					surfaceskinids.Resize(max(last_ok + 1, (long)sz1)); // clear out
-				}
-				else
-				{
-					surfaceskinids.Clear();
 				}
 			}
 		}
-		if (i < smf->modelsAmount)
+		else
 		{
-			if (modelid == -1) modelid = smf->modelIDs[i];
-			if (animationid == -1) animationid = smf->animationIDs[i];
-			if (modelframe == -1) modelframe = smf->modelframes[i];
-			if (modelframenext == -1 && smfNext) modelframenext = smfNext->modelframes[i];
-			if (!skinid.isValid()) skinid = smf->skinIDs[i];
+			modelid = smf->modelIDs[i];
+			animationid = smf->animationIDs[i];
+			modelframe = smf->modelframes[i];
+			if (smfNext) modelframenext = smfNext->modelframes[i];
+			skinid = smf->skinIDs[i];
 		}
 
-		if (modelid >= 0)
+		if (modelid >= 0 && modelid < Models.Size())
 		{
 			FModel* mdl = Models[modelid];
 			auto tex = skinid.isValid() ? TexMan.GetGameTexture(skinid, true) : nullptr;
@@ -394,7 +405,7 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 				FModel* animation = Models[animationid];
 				const TArray<TRS>* animationData = animation->AttachAnimationData();
 
-				if (!(smf->flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
+				if (!(smf_flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
 				{
 					boneData = animation->CalculateBones(modelframe, nextFrame ? modelframenext : modelframe, nextFrame ? inter : 0.f, animationData, actor->boneComponentData, i);
 					boneStartingPosition = renderer->SetupFrame(animation, 0, 0, 0, boneData, -1);
@@ -403,7 +414,7 @@ void RenderFrameModels(FModelRenderer* renderer, FLevelLocals* Level, const FSpr
 			}
 			else
 			{
-				if (!(smf->flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
+				if (!(smf_flags & MDL_MODELSAREATTACHMENTS) || evaluatedSingle == false)
 				{
 					boneData = mdl->CalculateBones(modelframe, nextFrame ? modelframenext : modelframe, nextFrame ? inter : 0.f, nullptr, actor->boneComponentData, i);
 					boneStartingPosition = renderer->SetupFrame(mdl, 0, 0, 0, boneData, -1);
@@ -953,8 +964,12 @@ bool IsHUDModelForPlayerAvailable(player_t* player)
 	// [MK] check that at least one psprite uses models
 	for (DPSprite* psp = player->psprites; psp != nullptr && psp->GetID() < PSP_TARGETCENTER; psp = psp->GetNext())
 	{
-		FSpriteModelFrame* smf = psp->Caller != nullptr ? FindModelFrame(psp->Caller->modelData != nullptr ? psp->Caller->modelData->modelDef != NAME_None ? PClass::FindActor(psp->Caller->modelData->modelDef) : psp->Caller->GetClass() : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) : nullptr;
-		if (smf != nullptr) return true;
+		if ( FindModelFrame((psp->Caller->modelData != nullptr && psp->Caller->modelData->modelDef != nullptr) ? psp->Caller->modelData->modelDef : psp->Caller->GetClass(), psp->GetSprite(), psp->GetFrame(), false) != nullptr ) return true;
 	}
 	return false;
+}
+
+unsigned int FSpriteModelFrame::getFlags(class DActorModelData * defs) const
+{
+	return (defs && defs->flags & MODELDATA_OVERRIDE_FLAGS)? (flags | defs->overrideFlagsSet) & ~(defs->overrideFlagsClear) : flags;
 }

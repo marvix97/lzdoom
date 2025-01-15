@@ -638,12 +638,11 @@ void FOBJModel::RenderFrame(FModelRenderer *renderer, FGameTexture * skin, int f
 		OBJSurface *surf = &surfaces[i];
 
 		FGameTexture *userSkin = skin;
-		if (!userSkin && curSpriteMDLFrame)
+		if (!userSkin)
 		{
-			int ssIndex = i + curMDLIndex * MD3_MAX_SURFACES;
-			if (i < MD3_MAX_SURFACES && curSpriteMDLFrame->surfaceskinIDs[ssIndex].isValid())
+			if (surfaceskinids && surfaceskinids[i].isValid())
 			{
-				userSkin = TexMan.GetGameTexture(curSpriteMDLFrame->surfaceskinIDs[ssIndex], true);
+				userSkin = TexMan.GetGameTexture(surfaceskinids[i], true);
 			}
 			else if (surf->skin.isValid())
 			{

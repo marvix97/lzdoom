@@ -63,8 +63,8 @@ namespace swrenderer
 
 		ModelRendererType GetType() const override { return SWModelRendererType; }
 
-		void BeginDrawModel(FRenderStyle style, FSpriteModelFrame *smf, const VSMatrix &objectToWorldMatrix, bool mirrored) override;
-		void EndDrawModel(FRenderStyle style, FSpriteModelFrame *smf) override;
+		void BeginDrawModel(FRenderStyle style, int smf_flags, const VSMatrix &objectToWorldMatrix, bool mirrored) override;
+		void EndDrawModel(FRenderStyle style, int smf_flags) override;
 		IModelVertexBuffer *CreateVertexBuffer(bool needindex, bool singleframe) override;
 		VSMatrix GetViewToWorldMatrix() override;
 		void BeginDrawHUDModel(FRenderStyle style, const VSMatrix &objectToWorldMatrix, bool mirrored) override;

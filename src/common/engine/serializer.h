@@ -85,6 +85,7 @@ public:
 	void ReadObjects(bool hubtravel);
 	bool BeginObject(const char *name);
 	void EndObject();
+	bool HasKey(const char* name);
 	bool HasObject(const char* name);
 	bool BeginArray(const char *name);
 	void EndArray();
@@ -234,6 +235,9 @@ FSerializer &Serialize(FSerializer &arc, const char *key, FName &value, FName *d
 FSerializer &Serialize(FSerializer &arc, const char *key, FSoundID &sid, FSoundID *def);
 FSerializer &Serialize(FSerializer &arc, const char *key, FString &sid, FString *def);
 FSerializer &Serialize(FSerializer &arc, const char *key, NumericValue &sid, NumericValue *def);
+FSerializer &Serialize(FSerializer &arc, const char *key, struct ModelOverride &mo, struct ModelOverride *def);
+FSerializer &Serialize(FSerializer &arc, const char *key, struct AnimModelOverride &mo, struct AnimModelOverride *def);
+FSerializer &Serialize(FSerializer &arc, const char *key, struct AnimOverride &ao, struct AnimOverride *def);
 
 template <typename T/*, typename = std::enable_if_t<std::is_base_of_v<DObject, T>>*/>
 FSerializer &Serialize(FSerializer &arc, const char *key, T *&value, T **)
@@ -244,6 +248,15 @@ FSerializer &Serialize(FSerializer &arc, const char *key, T *&value, T **)
 	return arc;
 }
 
+template<class A, class B>
+FSerializer &Serialize(FSerializer &arc, const char *key, std::pair<A, B> &value, std::pair<A, B> *def)
+{
+	arc.BeginObject(key);
+	Serialize(arc, "first", value.first, def ? &def->first : nullptr);
+	Serialize(arc, "second", value.second, def ? &def->second : nullptr);
+	arc.EndObject();
+	return arc;
+}
 
 template<class T, class TT>
 FSerializer &Serialize(FSerializer &arc, const char *key, TArray<T, TT> &value, TArray<T, TT> *def)

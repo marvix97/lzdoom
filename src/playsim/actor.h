@@ -676,17 +676,61 @@ enum EViewPosFlags // [MC] Flags for SetViewPos.
 	VPSF_ABSOLUTEPOS =		1 << 2,			// Use absolute position.
 };
 
+enum EAnimOverrideFlags
+{
+	ANIMOVERRIDE_NONE	= 1 << 0, // no animation
+	ANIMOVERRIDE_LOOP	= 1 << 1, // animation loops, otherwise it stays on the last frame once it ends
+};
+
+struct AnimOverride
+{
+	int firstFrame;
+	int lastFrame;
+	int loopFrame;
+	double startFrame;
+	int flags = ANIMOVERRIDE_NONE;
+	float framerate;
+	double startTic; // when the animation starts if interpolating from previous animation
+	double switchTic; // when the animation was changed -- where to interpolate the switch from
+};
+
+struct ModelOverride
+{
+	int modelID;
+	TArray<FTextureID> surfaceSkinIDs;
+};
+
+struct AnimModelOverride
+{
+	int id;
+
+	AnimModelOverride() = default;
+
+	AnimModelOverride(int i) : id(i) {}
+	operator int() { return id; }
+};
+
+enum EModelDataFlags
+{
+	MODELDATA_HADMODEL =		1 << 0,
+	MODELDATA_OVERRIDE_FLAGS =	1 << 1,
+};
+
 class DActorModelData : public DObject
 {
 	DECLARE_CLASS(DActorModelData, DObject);
 public:
-	FName				modelDef;
-	bool				hasModel;
-	TArray<int>			modelIDs;
-	TArray<FTextureID>	skinIDs;
-	TArray<FTextureID>	surfaceSkinIDs;
-	TArray<int>			animationIDs;
-	TArray<int>			modelFrameGenerators;
+	PClass *					modelDef;
+	TArray<ModelOverride>		models;
+	TArray<FTextureID>			skinIDs;
+	TArray<AnimModelOverride>	animationIDs;
+	TArray<int>					modelFrameGenerators;
+	int							flags;
+	int							overrideFlagsSet;
+	int							overrideFlagsClear;
+
+	AnimOverride curAnim;
+	AnimOverride prevAnim; // used for interpolation when switching anims
 
 	DActorModelData() = default;
 	virtual void Serialize(FSerializer& arc) override;

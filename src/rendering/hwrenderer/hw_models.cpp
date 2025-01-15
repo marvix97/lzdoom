@@ -53,7 +53,7 @@ VSMatrix FHWModelRenderer::GetViewToWorldMatrix()
 	return objectToWorldMatrix;
 }
 
-void FHWModelRenderer::BeginDrawModel(FRenderStyle style, FSpriteModelFrame *smf, const VSMatrix &objectToWorldMatrix, bool mirrored)
+void FHWModelRenderer::BeginDrawModel(FRenderStyle style, int smf_flags, const VSMatrix &objectToWorldMatrix, bool mirrored)
 {
 	state.SetDepthFunc(DF_LEqual);
 	state.EnableTexture(true);
@@ -61,7 +61,7 @@ void FHWModelRenderer::BeginDrawModel(FRenderStyle style, FSpriteModelFrame *smf
 	// This solves a few of the problems caused by the lack of depth sorting.
 	// [Nash] Don't do back face culling if explicitly specified in MODELDEF
 	// TO-DO: Implement proper depth sorting.
-	if (!(style == DefaultRenderStyle()) && !(smf->flags & MDL_DONTCULLBACKFACES))
+	if (!(style == DefaultRenderStyle()) && !(smf_flags & MDL_DONTCULLBACKFACES))
 	{
 		state.SetCulling((mirrored ^ portalState.isMirrored()) ? Cull_CCW : Cull_CW);
 	}
@@ -70,16 +70,16 @@ void FHWModelRenderer::BeginDrawModel(FRenderStyle style, FSpriteModelFrame *smf
 	state.EnableModelMatrix(true);
 }
 
-void FHWModelRenderer::EndDrawModel(FRenderStyle style, FSpriteModelFrame *smf)
+void FHWModelRenderer::EndDrawModel(FRenderStyle style, int smf_flags)
 {
 	state.SetBoneIndexBase(-1);
 	state.EnableModelMatrix(false);
 	state.SetDepthFunc(DF_Less);
-	if (!(style == DefaultRenderStyle()) && !(smf->flags & MDL_DONTCULLBACKFACES))
+	if (!(style == DefaultRenderStyle()) && !(smf_flags & MDL_DONTCULLBACKFACES))
 		state.SetCulling(Cull_None);
 }
 
-void FHWModelRenderer::BeginDrawHUDModel(FRenderStyle style, const VSMatrix &objectToWorldMatrix, bool mirrored)
+void FHWModelRenderer::BeginDrawHUDModel(FRenderStyle style, const VSMatrix &objectToWorldMatrix, bool mirrored, int smf_flags)
 {
 	state.SetDepthFunc(DF_LEqual);
 
@@ -95,7 +95,7 @@ void FHWModelRenderer::BeginDrawHUDModel(FRenderStyle style, const VSMatrix &obj
 	state.EnableModelMatrix(true);
 }
 
-void FHWModelRenderer::EndDrawHUDModel(FRenderStyle style)
+void FHWModelRenderer::EndDrawHUDModel(FRenderStyle style, int smf_flags)
 {
 	state.SetBoneIndexBase(-1);
 	state.EnableModelMatrix(false);

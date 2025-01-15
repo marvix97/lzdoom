@@ -353,6 +353,7 @@ public:
 	PalEntry ThingColor;	// thing's own color
 	FColormap Colormap;
 	FSpriteModelFrame * modelframe;
+	int modelframeflags;
 	FRenderStyle RenderStyle;
 	int OverrideShader;
 
